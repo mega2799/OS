@@ -1,9 +1,9 @@
 #!/bin/bash
 NUM=$1
-RES=$NUM
+RIS=$NUM
 while (( $NUM  !=  1 )) ; do
 	(( NUM = $NUM - 1 ))
-	(( RES = $RES * $NUM ));
+	(( RIS = $RIS * $NUM ));
 done
 
-echo $RES
+
