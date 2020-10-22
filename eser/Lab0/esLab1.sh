@@ -1,3 +1,5 @@
+#!/usr/bin/bash
+
 #ES 1
 echo ${HOME} ${USER} ${DISPLAY};
 

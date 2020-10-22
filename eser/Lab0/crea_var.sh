@@ -1,3 +1,4 @@
+#!/usr/bin/bash
 PIPPO=${USER}@${HOME}\ in\ ${PWD}
 echo gonna export ${PIPPO}
 #source ./expShell.sh
