@@ -14,6 +14,8 @@ Una shell B figlia di una shell padre A (e in generale, un processo B figlio di 
 ![FD-subshell](https://github.com/mega2799/OS/blob/main/images/FD-subshell.png)
 Uno script bash può dover usare dei file su disco per poter fare I/O, aprendo un nuovo file dal disco ottengo un nuovo FD che lo rappresenta, è possibile quindi utilizzarlo per accedere a quel file sostituendo i classici STDIN STDOT e STDERR 
 
+<pre>
+
 Modo Apertura | 				Utente sceglie									| 		Sistema sceglie FD 
 
 Solo Lettura 	##				exec n<  PercorsoFile    		##					 exec{NomeVar}<   Percorso
@@ -24,9 +26,13 @@ Aggiunta in coda   	##		  exec n>> PercorsoFile 					##		  exec  {NomeVar}>>  Pe
 
 Lettura e Scrittura  	##		exec n<> PercorsoFile 			##	        exec{NomeVar}<>   PercorsoFile
 
+</pre> 
+
 La variabile $$ indica il PID della shell in cui attualmente sto lavorando, posso utilizzare il comando `ls /proc/$$/fd` per poter vedere la Tabella dei file aperti del processo 
 
 Qualunque sia il modo di apertura con cui ho aperto un file , posso chiedere lo stream attraverso il comando `exec n>&-` dive n è il FD da chiudere
 
 
+
+### Ridirezionamenti di Stream di I/O 
 
