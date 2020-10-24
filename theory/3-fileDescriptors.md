@@ -68,3 +68,10 @@ Se una bash ha due stream dello stesso tipo (OUT/IN) identificati da FD N,M è p
 
 > es: `ls file.txt 2>&1` succede che lo STDERR di ls viene ridirezionato verso lo STDOUT di ls 
 
+##### Ordine
+
+![FD-subshell](https://github.com/mega2799/OS/blob/main/images/ordine1.png)
+
+![FD-subshell](https://github.com/mega2799/OS/blob/main/images/ordine2.png)
+
+![FD-subshell](https://github.com/mega2799/OS/blob/main/images/ordine3.png)
