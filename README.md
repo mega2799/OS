@@ -1,3 +1,1 @@
 # Sistemi Operativi
- - eser 
- - theory
