@@ -14,5 +14,6 @@ int main(int argc, char **argv) {
 		vet[i] = i - 19 ;
 		printf("vet[%d]: %d\n",i, vet[i]);
 	}
+	free(vet);
     return 0;
 }
