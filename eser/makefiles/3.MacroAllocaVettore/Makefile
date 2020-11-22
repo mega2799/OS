@@ -7,7 +7,7 @@ exe: main.o
 	gcc ${CFLAGS} -o exe main.o 
 
 main.o:
-	gcc ${CFLAGS} -c -D'${macro}'  main.c 
+	gcc ${CFLAGS} -c -D'${macro}'   main.c 
 
 .PHONY: clear 
 
