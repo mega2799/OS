@@ -98,4 +98,33 @@ Il file pthread.h contiene le definizioni dei pthread, iniziano con pthread_
                                / ___ \ |  __/ | | 
                               /_/   \_\|_|   |___|
                                                   
+int pthread_create(pthread_t*  thread,pthread_attr_t *attr, 
+						void*(*start_routine)(void*), void* arg);
 
+Crea un thread e lo rende eseguibile, il terzo parametro è una funzione che 
+restituisce e prende un puntatore generico e che verrà eseguita all interno del 
+thread appena creato, il quarto è un puntatore generico che verrà passato alla 
+funzione, il secondo parametro è di tipo puntatore a pthread_attr_t che è una 
+struttura dati che serve a specificare delle caratteristiche particolari del 
+thread (ouò essere NULL per usare impostazioni di default), il primo argomento 
+è un puntatore ad una struttura dati pthread_t, ossia un intero che contiene 
+l' identificatore del thread. Questa funzione restituisce un intero che se 
+diverso da zero indica che non è stato possibile creare il thread, 0 in caso 
+sia andato tutto bene.
+
+void pthread_exit(void* retval);
+
+Chiamata da un thread quando vuole terminare la propria esecuzione, 
+il main è il primo thread del processo, questa funziona fa terminare il thread 
+corrente e se questo è l'ultimo del processo allora tutto il processo
+termina con esso, è caso del main. Quando il thread termina nel puntatore retval
+c'è una struttura dati che fornisce le specifiche del thread che si è appena 
+concluso al thread che potrebbe essere eventualmente in attesa 
+
+pthread_t pthread_self(void);
+
+Restituisce l'identificatore del thread che la chiama
+
+pthread_t pthread_equal ( pthread_t p1, pthread_t p2);
+
+Restituisce 1 se i due identificatori sono uguali 
