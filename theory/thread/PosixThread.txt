@@ -110,6 +110,10 @@ thread (ouò essere NULL per usare impostazioni di default, joinable), il primo
 argomento è un puntatore ad una struttura dati pthread_t, ossia un intero che 
 contiene l' identificatore del thread. Questa funzione restituisce un intero che 
 se diverso da zero indica che non è stato possibile creare il thread, 0 in caso 
+thread (può essere NULL per usare impostazioni di default), il primo argomento 
+è un puntatore ad una struttura dati pthread_t, ossia un intero che contiene 
+l' identificatore del thread. Questa funzione restituisce un intero che se 
+diverso da zero indica che non è stato possibile creare il thread, 0 in caso 
 sia andato tutto bene.
 
 void pthread_exit(void* retval);
@@ -138,3 +142,22 @@ pthread_t pthread_equal ( pthread_t p1, pthread_t p2);
 
 	 Restituisce 1 se i due identificatori sono uguali 
 
+Restituisce 1 se i due identificatori sono uguali 
+
+----mutua esclusione 
+
+Senza garantire la mutua esclusione i risultati delle espressioni nei thread 
+non sono prevedibili e potrebbero dare risultati diversi ogni volta che vengono
+eseguiti (race condition) per evitare queste criticità si deve usare la Mutex.
+Sono dei tipi di variabili pthread_mutex_t che regolano l' accesso a dati 
+protetti che devono essere usati da più thread, effettuando un lock su quella 
+variabili prima di utlizzarla. Dopo aver utilizzato quella variabile condivisa
+chiama la funzione unlock su di essa in modo che un altro thread che era 
+in attesa può accedere ai dati 
+Sequenza mutex:
+	creare variabile pthread_mutex_t ed inizializzarla
+	ogni thread che vuole accedervi chiama la lock 
+	un solo puo usarla mentre gli altri aspettano 
+	il thread proprietario accede ai dati e esegue funzioni
+	il thread proprietario ribera la mutex con la unlock()
+	un altro thread diventa proprietario della mutex 
