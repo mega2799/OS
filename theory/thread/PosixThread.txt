@@ -92,11 +92,11 @@ Le API si di dividono in:
 			a quel thread di proseguire 
 
 Il file pthread.h contiene le definizioni dei pthread, iniziano con pthread_
-                                  _     ____  ___ 
-                                 / \   |  _ \|_ _|
-                                / _ \  | |_) || | 
-                               / ___ \ |  __/ | | 
-                              /_/   \_\|_|   |___|
+                                  _     ____   ___ 
+                                 / \   |  _ \ |_ _|
+                                / _ \  | |_) | | | 
+                               / ___ \ |  __/  | | 
+                              /_/   \_\|_|    |___|
                                                   
 int pthread_create(pthread_t*  thread,pthread_attr_t *attr, 
 						void*(*start_routine)(void*), void* arg);
@@ -106,10 +106,10 @@ restituisce e prende un puntatore generico e che verrà eseguita all interno del
 thread appena creato, il quarto è un puntatore generico che verrà passato alla 
 funzione, il secondo parametro è di tipo puntatore a pthread_attr_t che è una 
 struttura dati che serve a specificare delle caratteristiche particolari del 
-thread (ouò essere NULL per usare impostazioni di default), il primo argomento 
-è un puntatore ad una struttura dati pthread_t, ossia un intero che contiene 
-l' identificatore del thread. Questa funzione restituisce un intero che se 
-diverso da zero indica che non è stato possibile creare il thread, 0 in caso 
+thread (ouò essere NULL per usare impostazioni di default, joinable), il primo 
+argomento è un puntatore ad una struttura dati pthread_t, ossia un intero che 
+contiene l' identificatore del thread. Questa funzione restituisce un intero che 
+se diverso da zero indica che non è stato possibile creare il thread, 0 in caso 
 sia andato tutto bene.
 
 void pthread_exit(void* retval);
@@ -119,12 +119,22 @@ il main è il primo thread del processo, questa funziona fa terminare il thread
 corrente e se questo è l'ultimo del processo allora tutto il processo
 termina con esso, è caso del main. Quando il thread termina nel puntatore retval
 c'è una struttura dati che fornisce le specifiche del thread che si è appena 
-concluso al thread che potrebbe essere eventualmente in attesa 
+concluso al thread che potrebbe essere eventualmente in attesa con una join.
+Il valore di questo puntatore viene mantenuto in memoria fino a quando un' altro
+thread non richiede il risultato, la memoria viene rilasciata solo quando il 
+processo termina o quando un altro thread richiede il risultato del thread 
+appena terminato 
+(E' possibile configurare i thread al momento della loro creazione in modo che 
+il loro stack possa essere liberato immediatamente dopo la loro terminazione 
+senza aspettare una pthread_join, questi thread si dicono detached, però questo 
+tipo di thread non può far sapere a nessuno del loro risultato) 
+
 
 pthread_t pthread_self(void);
 
-Restituisce l'identificatore del thread che la chiama
+	Restituisce l'identificatore del thread che la chiama
 
 pthread_t pthread_equal ( pthread_t p1, pthread_t p2);
 
-Restituisce 1 se i due identificatori sono uguali 
+	 Restituisce 1 se i due identificatori sono uguali 
+
