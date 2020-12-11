@@ -142,22 +142,63 @@ pthread_t pthread_equal ( pthread_t p1, pthread_t p2);
 
 	 Restituisce 1 se i due identificatori sono uguali 
 
-Restituisce 1 se i due identificatori sono uguali 
-
-----mutua esclusione 
-
+                         __  __         _              
+                        |  \/  | _   _ | |_  ___ __  __
+                        | |\/| || | | || __|/ _ \\ \/ /
+                        | |  | || |_| || |_|  __/ >  < 
+                        |_|  |_| \__,_| \__|\___|/_/\_\
+                                                       
 Senza garantire la mutua esclusione i risultati delle espressioni nei thread 
 non sono prevedibili e potrebbero dare risultati diversi ogni volta che vengono
 eseguiti (race condition) per evitare queste criticità si deve usare la Mutex.
-Sono dei tipi di variabili pthread_mutex_t che regolano l' accesso a dati 
+Tipi di variabili (pthread_mutex_t) che regolano l' accesso ai dati 
 protetti che devono essere usati da più thread, effettuando un lock su quella 
-variabili prima di utlizzarla. Dopo aver utilizzato quella variabile condivisa
-chiama la funzione unlock su di essa in modo che un altro thread che era 
-in attesa può accedere ai dati 
+variabile prima di utlizzarla. Dopo aver utilizzato la variabile condivisa si 
+chiama la funzione unlock su di essa in modo che un altro thread in attesa può 
+accedere ai dati 
 Sequenza mutex:
 	creare variabile pthread_mutex_t ed inizializzarla
 	ogni thread che vuole accedervi chiama la lock 
-	un solo puo usarla mentre gli altri aspettano 
-	il thread proprietario accede ai dati e esegue funzioni
+	un solo thread puo usarla mentre gli altri aspettano 
+	il thread proprietario accede ai dati ed esegue funzioni
 	il thread proprietario ribera la mutex con la unlock()
 	un altro thread diventa proprietario della mutex 
+
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
+	controlla che la mutex non detenga la mutua esclusione e fa una lock nel
+	caso in cui sia libera e restituisce EBUSY in caso contrario 
+
+                ____                   _  _  _    _               
+               / ___| ___   _ __    __| |(_)| |_ (_)  ___   _ __  
+              | |    / _ \ | '_ \  / _` || || __|| | / _ \ | '_ \ 
+              | |___| (_) || | | || (_| || || |_ | || (_) || | | |
+               \____|\___/ |_| |_| \__,_||_| \__||_| \___/ |_| |_|
+                                                                  
+              __     __            _         _      _            
+              \ \   / /__ _  _ __ (_)  __ _ | |__  | |  ___  ___ 
+               \ \ / // _` || '__|| | / _` || '_ \ | | / _ \/ __|
+                \ V /| (_| || |   | || (_| || |_) || ||  __/\__ \
+                 \_/  \__,_||_|   |_| \__,_||_.__/ |_| \___||___/
+                                                                 
+Le Condition Variables sono delle variabili coinvolte nel meccanismo della mutua
+esclusione a sostegno delle mutex, bloccandole o facendo continuare a seconda 
+del loro contenuto. Queste variabili evitano al programmatore di controllare 
+continuamente se il valore delle varibili condivise corrisponde alle richieste
+con un loop potendo effettuare Busy Waiting, esistono 3 principali funzioni: 
+
+pthread_cond_wait(&cond, &mutex)
+	che blocca un thread e lo fa aspettare fino a quando un altro thread non lo
+	sveglia con una signal per poter ripredere l'esecuzione
+
+pthread_cond_signal(&cond)  
+	sveglia un'altro thread bloccato sulla wait che potrà ripartire solo una
+	volta ottenuta la mutua (indietro) esclusione
+
+pthread_cond_broadcast(&cond)
+	sveglia tutti i thread bloccati in una pthread_cond_wait in una volta sola, 
+	ma per poter ripartire ognuno di essi dovra riprendere la mutua esclusione
+
+Le chiamate di tipo signal devono essere effuttuate da un thread solo quando 
+detiene la mutua esclusionesulla mutex specificata nella wait per quella 
+condition variabile 
+						[[ esempio volpe-gallina ]]
