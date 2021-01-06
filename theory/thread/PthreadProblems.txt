@@ -1,0 +1,264 @@
+                       __  __        _              _  _ 
+                      |  \/  |  ___ | |_  ___    __| |(_)
+                      | |\/| | / _ \| __|/ _ \  / _` || |
+                      | |  | ||  __/| |_| (_) || (_| || |
+                      |_|  |_| \___| \__|\___/  \__,_||_|
+                                                         
+                ____   _              _         _    _         _ 
+               |  _ \ (_) ___   ___  | | _   _ | |_ (_)__   __(_)
+               | |_) || |/ __| / _ \ | || | | || __|| |\ \ / /| |
+               |  _ < | |\__ \| (_) || || |_| || |_ | | \ V / | |
+               |_| \_\|_||___/ \___/ |_| \__,_| \__||_|  \_/  |_|
+                                                                 
+                   ____   _    _                            _ 
+                  |  _ \ | |_ | |__   _ __  ___   __ _   __| |
+                  | |_) || __|| '_ \ | '__|/ _ \ / _` | / _` |
+                  |  __/ | |_ | | | || |  |  __/| (_| || (_| |
+                  |_|     \__||_| |_||_|   \___| \__,_| \__,_|
+                                                              
+SINCRONIZZAZIONE CIRCOLARE 1 A 1 
+Un programma crea 2 thread, T1 e T2 ciascuno dei quali itera all'infinito eseguendo una propria sequenza di 
+operazioni Op1 e Op2 in mutua esclusione. Ad inizio e fine del loop vengono eseguite altreOp non in mutex.
+La sincronizzazione deve eseguire in modo alternato Op1 -> Op2 -> Op1 e cosi via partendo da T1.
+Al termine delle proprie operazioni T1 passa il controllo a T2, che stava aspettando, che comincia a compiere
+le proprie operazioni e T1 si mette in attesa del loro completamento per poi ripartire con il suo loop.
+
+NON BASTEREBBE UNA MUTEX PER FARE WAIT ? 
+No, se loo scheduler dovesse interrompere T2 prima che possa prendere la mutua esclusione il controllo passerebbe
+a T1 che poi farebbe un secondo giro consecutivo distruggendo quindi la sincronizzazione
+
+BASTEREBBERO MUTEX E COND PER PRIMA UNA WAIT E POI UNA SIGNAL ? 
+
+pthread_mutex_t mutex;   pthread_cond_t cond ;
+
+void *ThreadPrimo ( void *arg )  { 
+
+	while(1) {
+		pthread_mutex_lock(&mutex); 
+		pthread_cond_wait(  &cond, &mutex);   /* Primo aspetta */
+		
+		.........../* esegue le operazioni Op1 */
+		
+		pthread_cond_signal( &cond );/* abilito Secondo ???? */
+		
+		pthread_mutex_unlock( &mutex ); /* cosi' Secondo riparte ??? */
+	}
+}
+void *ThreadSecondo ( void *arg )  { 
+
+	while(1) {
+		pthread_mutex_lock(&mutex); 
+		pthread_cond_wait(  &cond, &mutex);   /* Primo aspetta */
+		
+		........... /* esegue le operazioni Op2 */
+		
+		pthread_cond_signal( &cond );/* abilito Primo ???? */
+		
+		pthread_mutex_unlock( &mutex ); /* cosi' Primo riparte ??? */
+	}
+}
+
+No, T1 esegue la mutex_lock() e poi si blocca sulla sua cond_wait() aspettando un signal rilasciando la mutua 
+esclusione, a questo punto T2 prende la mutex ed effettua anche lui la cond_wait(), nessuno riesce più a muoversi
+poiche entrambi aspettano un signal che non arriverà mai, si verifica il DeadLock
+
+
+BASTEREBBE USARE LA MUTUA ESCLUSIONE E UNA COND, FARE PRIMA UNA SIGNAL E POI UNA WAIT? 
+
+pthread_mutex_t mutex;   pthread_cond_t cond ;
+
+void *ThreadPrimo ( void *arg )  { 
+
+	while(1) {
+		pthread_mutex_lock(&mutex); 
+		pthread_cond_signal( &cond );		/* abilito Secondo ???? */
+	
+		...........	/* esegue le operazioni Op1 */
+	
+		pthread_cond_wait(  &cond, &mutex);   /* Primo aspetta */
+	
+		pthread_mutex_unlock( &mutex ); /* cosi' Secondo riparte ??? */
+	}
+}
+void *ThreadSecondo ( void *arg )  { 
+	while(1) {
+		pthread_mutex_lock(&mutex); 
+		pthread_cond_signal( &cond ); /* abilito Primo ???? */
+
+		...........	/* esegue le operazioni Op2 */
+	
+		pthread_cond_wait(  &cond, &mutex);   /* Secondo aspetta */
+	
+		pthread_mutex_unlock( &mutex ); /* cosi' Primo riparte ??? */
+	}
+}
+
+No, perchè T2 potrebbe prendere per primo la mutua esclusione ed eseguire la propria parte critica per primo, non 
+rispettando quindi l'ordine richiesto dalla sincronizzazione.
+In generale, quando ho a che fare con thread che eseguono ripetutamente delle 
+operazioni, devo considerare con attenzione la prima iterazione, poiché rappresenta 
+solitamente un caso particolare.
+
+	CORRETTA 
+Uso variabili come fossero boolean, PrimoFaiWait viene settata a 0 da T2 dopo la signal  per evitare che 
+T1 faccia la wait DOPO la signal, al primo giro T1 non deve fare la wait, esegue la sezione critica e poi svglia
+con un signal T2 che aspetta il rilascio della mtutua esclusione per poter partire e nel mentre setta a 0 SecondoFaiWait dato che deve ancora eseguire la sezione critica di T2
+
+pthread_mutex_t mutex;   pthread_cond_t cond ; int PrimoFaiWait; int SecondoFaiWait; 
+
+uint64_t valGlobale = 0; /* dati da proteggere in sez critica */ 
+
+int main () 
+{ 
+	pthread_t th; 
+	pthread_cond_init(&cond, NULL);
+	pthread_mutex_init(&mutex, NULL); 
+
+	PrimoFaiWait=0; /* all'inizio Primo non deve aspettare Secondo */
+	SecondoFaiWait=1;
+
+	pthread_create( &th, NULL, Primo, NULL); 
+	pthread_create( &th, NULL, Secondo, NULL); 
+	pthread_exit( NULL );
+
+} 
+
+void *Primo (  void * arg )  { 
+
+	while(1) {
+		pthread_mutex_lock(&mutex); 
+		/* se Secondo ha gia' fatto la signal allora Primo deve proseguire senza fare la wait */
+		
+		if (PrimoFaiWait)  
+			pthread_cond_wait(&cond,&mutex);
+		
+		/* al prossimo giro Primo devo fare la wait, 
+		a meno che Secondo non faccia la signal prima che Primo tenti di fare la wait */
+		
+		PrimoFaiWait=1;
+		
+		/* SEZIONE CRITICA : legge cio' che e' stato messo da Secondo e lo cambia */
+		
+		valGlobale=valGlobale+3;
+		
+		pthread_cond_signal(&cond); 
+		/* risveglio Secondo */
+		
+		/* Nel caso che Secondo non abbia ancora fatto la wait allora Primo dice a Secondo
+		che non deve aspettare perche' Primo ha gia' fatto la signal */
+		
+		SecondoFaiWait=0;
+		
+		pthread_mutex_unlock(&mutex); /* rilascio mutua esclusione, cosi' Secondo parte */
+	}
+
+} 
+
+void *Secondo ( void *arg )  { 
+	while(1) {
+		pthread_mutex_lock(&mutex); 
+		
+		/* se Primo ha gia' fatto la signal allora Secondo deve proseguire senza fare la wait */
+		
+		if (SecondoFaiWait)  
+			pthread_cond_wait(&cond,&mutex);
+		
+		/* al prossimo giro Secondo devo fare la wait, 
+		
+		a meno che Primo non faccia la signal prima che Secondo tenti di fare la wait */
+		
+		SecondoFaiWait=1;
+		
+		/* SEZIONE CRITICA : legge cio' che e' stato messo da Primo e lo cambia */
+		
+		valGlobale=valGlobale+10;
+		
+		pthread_cond_signal(&cond); 
+		/* risveglio Primo */
+		
+		/* Nel caso che Primo non abbia ancora fatto la wait allora Secondo dice a Primo
+		che non deve aspettare perche' Secondo ha gia' fatto la signal */
+		
+		PrimoFaiWait=0;
+		
+		pthread_mutex_unlock(&mutex); /* rilascio mutua esclusione, così Primo può  partire */
+	}
+}
+
+SINCRONIZZAZIONE CIRCOLARE A 3 CON TURNO 
+
+int turno=0; int var_globale=33;
+
+pthread_mutex_t mutex; pthread_cond_t cond;
+
+void * thread_function (void *arg){
+	intptr_t mioindice = (intptr_t)arg;
+	while(1){
+		pthread_mutex_lock( &mutex );
+	
+		while( turno != mioindice ){
+			pthread_cond_wait( &cond, &mutex );
+			if( turno != mioindice )
+			pthread_cond_signal(&cond);
+		}
+		valGlobale=valGlobale+3;
+		/* sezione critica */
+		turno= (turno+1) %3;
+		pthread_cond_signal( &cond );
+		}
+	}
+	pthread_mutex_unlock( &mutex ); /*rilascio mutex */
+}
+
+
+FORNAIO 
+Vengono create variabili mutex: mutexDistributoreDiBiglietti e mutexTurno, variaibili globali che indicano il biglietto e il display
+il thread del Cliente (all'interno del while) prende la mutexDistributoreDiBiglietti, copia il valore di biglietto e lo "prende" ed aumenta la 
+variabile globale, rilascia la mutexDistributoreDiBiglietti e prende la mutexTurno aspettando il proprio turno in un WHILE finche
+il dislpay non indica il suo biglietto con una wait. La situazione complessiva è quindi la creazione di una coda FIFO 
+nella quale i Clienti aspettano che sia il proprio turno per potersi servire. Nel momento in cui puo servirsi al bancone incrementa il numero sul display 
+fa una broadcast per svegliare tutti i clienti fermi sulla wait per ri-controllare che sia il proprio turno e quidni poi rialascia la mutua esclusione
+
+int bigliettoGlog=0, bigliettoSulDisplay=0:
+pthread_mutex_t mutexDistributoreBiglietti , mutexTurno; pthread_cond_t cond;
+void *cliente (void *arg) {
+	int biglietto;
+	while(1){
+		/* cliente prende il biglietto */
+		pthread_mutex_lock( &mutexDistributoreBiglietti );
+		biglietto=bigliettoGlob;
+		bigliettoGlob++;
+		pthread_mutex_unlock( &mutexDistributoreBiglietti );
+		/* cliente aspetta il suo turno */
+		pthread_mutex_lock( &mutexTurno );
+		while ( bigliettoSulDisplay != biglietto )
+		pthread_cond_wait( &cond, &mutexTurno );
+	}
+	/* il cliente si serve al bancone */
+	bigliettoSulDisplay++; /*cliente ha finito, il prossimo é ... */
+	pthread_cond_broadcast( &cond );
+	pthread_mutex_unlock( &mutexTurno );
+}
+
+N produttori e M consumatori e K buffer
+Programma composto da 2 tipi di thread, entrambi eseguono un ciclo infinito in cui costruiscono e consumano un 
+prodotto, in un buffer i primi depositano i prodotti e i secondi lo raccolgono (in mutua esclusione) 
+
+K = 1
+vincoli per la sincronizzazione:
+	il buffer puo essere acceduto solo da un T alla volta 
+	prima di depositare il buffer deve essere vuoto
+	tutti i produttori devono prima o poi depositare il loro dato nel buffer (no starvation)  
+	tutti i consumatori devono prima o poi estrarre un dato nel buffer (no starvation) 
+Le sezioni critiche sono quelle in cui si deve depositare un dato nel buffer e si deve prelevarne un altro
+In TREE esiste la soluzione NON EFFICENTE che va benissimo è meno complicata e piu facilmente impiegabile
+Produttori:
+	utilizzano una una condition variable condProduttore per aspettare che il numero dei buff pieni diminuisca
+	e possano mettere 	il proprio dato nel buffer (pthread_cond_wait) dopo di chè aumentano il numero dei buff 
+	pieni e svegliano con una signal uno dei consumatori, per poi rilasciare la mutex
+Consumatori:
+	utilizzano anche loro una condition variable condConsumatore ed aspettano con una wait che ci sia almeno un 
+	buffer pieno per poter prendere il dato, il signal viene mandato dal Produttore quando ha riempito, diminuisce
+	il numero dei buffer pieni emette una signal per svegliare un Produttore e fargli produrre un dato da immagazzi
+	nare e poi rilascia la mutex 
+
